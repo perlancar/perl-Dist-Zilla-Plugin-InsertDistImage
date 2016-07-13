@@ -129,7 +129,7 @@ In F<dist.ini>:
  [InsertDistImages]
  ;hosting=metacpan
 
-In F<lib/Foo.pm> or F<bin/>:
+In F<lib/Foo.pm> or F<bin/bar>:
 
  ...
 
