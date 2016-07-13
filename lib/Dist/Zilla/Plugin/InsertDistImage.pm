@@ -20,6 +20,7 @@ has include_files => (is => 'rw');
 has exclude_files => (is => 'rw');
 has include_file_pattern => (is => 'rw');
 has exclude_file_pattern => (is => 'rw');
+has check_exists => (is => 'rw', default=>sub{0});
 
 sub mvp_multivalue_args { qw(include_files exclude_files) }
 
@@ -72,7 +73,7 @@ sub munge_files {
     my $code_insert = sub {
         my ($path) = @_;
         $path =~ s!\\!/!g; # WIN
-        unless (-f $path) {
+        unless (!$self->check_exists || (-f $path)) {
             $self->log_fatal(["File %s does not exist", $path]);
         }
         unless ($path =~ /\.(jpe?g|png|gif)\z/) {
@@ -269,6 +270,10 @@ C<data:> URIs where the image data is directly embedded in the URL.
 =head2 include_file_pattern => re
 
 =head2 exclude_file_pattern => re
+
+=head2 check_exists => bool (default: 0)
+
+Set to 1 to check that the file exists.
 
 
 =head1 SEE ALSO
