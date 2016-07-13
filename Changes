@@ -1,5 +1,11 @@
 Revision history for Dist-Zilla-Plugin-InsertDistImage
 
+0.003   2016-07-13 (PERLANCAR)
+
+	- Add configuration: check_exists, change default to not check that
+	  file exists.
+
+
 0.002   2016-07-13 (PERLANCAR)
 
 	- Implement hosting=data.
