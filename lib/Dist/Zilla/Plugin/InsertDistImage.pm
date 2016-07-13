@@ -65,7 +65,6 @@ sub munge_files {
             $self->log_fatal(["Repository URL is not bitbucket"]) unless ($bitbucket_user, $bitbucket_repo) = $url =~ m!bitbucket\.org/([^/]+)/([^/]+)\.git!;
         }
     } elsif ($hosting eq 'data') {
-        $self->log_fatal(["Not yet implemented"]);
     } else {
         $self->log_fatal(["Unknown hosting value '%s'", $hosting]);
     }
