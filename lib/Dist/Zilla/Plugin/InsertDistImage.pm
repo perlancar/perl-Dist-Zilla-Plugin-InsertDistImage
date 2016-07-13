@@ -16,8 +16,17 @@ with (
 );
 
 has hosting => (is => 'rw', default => sub {'metacpan'});
+has include_files => (is => 'rw');
+has exclude_files => (is => 'rw');
+has include_file_pattern => (is => 'rw');
+has exclude_file_pattern => (is => 'rw');
+
+sub mvp_multivalue_args { qw(include_files exclude_files) }
 
 use namespace::autoclean;
+
+use File::Slurper qw(read_binary);
+use URI;
 
 sub munge_files {
     my $self = shift;
@@ -100,12 +109,50 @@ sub munge_files {
                 $bitbucket_repo,
                 $path,
             );
+        } elsif ($hosting eq 'data') {
+            my $ct;
+            if ($path =~ /\.jpe?g\z/) {
+                $ct = "image/jpeg";
+            } else {
+                $path =~ /\.(\w+)\z/ or die;
+                $ct = "image/$1";
+            }
+            $url = URI->new("data:");
+            $url->media_type($ct);
+            $url->data(read_binary($path));
+            $url = "$url";
         }
 
         "=begin html\n\n<img src=\"$url\" />\n\n=end html\n\n";
     };
 
+  FILE:
     for my $file (@{ $self->found_files }) {
+        if ($self->include_files && @{ $self->include_files }) {
+            unless (grep {$_ eq $file->name} @{$self->include_files}) {
+                $self->log_debug(["Skipped file %s (not in include_files)", $file->name]);
+                next FILE;
+            }
+        }
+        if ($self->exclude_files && @{ $self->exclude_files }) {
+            if (grep {$_ eq $file->name} @{$self->exclude_files}) {
+                $self->log_debug(["Skipped file %s (in include_files)", $file->name]);
+                next FILE;
+            }
+        }
+        if (my $pat = $self->include_file_pattern) {
+            unless ($file->name =~ /$pat/) {
+                $self->log_debug(["Skipped file %s (doesn't match include_file_pattern)", $file->name]);
+                next FILE;
+            }
+        }
+        if (my $pat = $self->exclude_file_pattern) {
+            if ($file->name =~ /$pat/) {
+                $self->log_debug(["Skipped file %s (matches exclude_file_pattern)", $file->name]);
+                next FILE;
+            }
+        }
+
         my $content = $file->content;
         if ($content =~ s{^#\s*IMAGE(?:\s*:\s*|\s+)(\S.+?)\s*$}{$code_insert->($1)}egm) {
             $self->log(["inserting images into '%s'", $file->name]);
@@ -128,6 +175,10 @@ In F<dist.ini>:
 
  [InsertDistImages]
  ;hosting=metacpan
+ ;include_files=...
+ ;exclude_files=...
+ ;include_file_pattern=...
+ ;exclude_file_pattern=...
 
 In F<lib/Foo.pm> or F<bin/bar>:
 
@@ -211,6 +262,14 @@ Instead of using a remote http/https hosting provider, this will instead use
 C<data:> URIs where the image data is directly embedded in the URL.
 
 =back
+
+=head2 include_files => str+
+
+=head2 exclude_files => str+
+
+=head2 include_file_pattern => re
+
+=head2 exclude_file_pattern => re
 
 
 =head1 SEE ALSO
