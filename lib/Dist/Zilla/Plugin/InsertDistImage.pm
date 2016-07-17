@@ -20,7 +20,6 @@ has include_files => (is => 'rw');
 has exclude_files => (is => 'rw');
 has include_file_pattern => (is => 'rw');
 has exclude_file_pattern => (is => 'rw');
-has check_exists => (is => 'rw', default=>sub{0});
 
 sub mvp_multivalue_args { qw(include_files exclude_files) }
 
@@ -71,13 +70,12 @@ sub munge_files {
     }
 
     my $code_insert = sub {
-        my ($path) = @_;
-        $path =~ s!\\!/!g; # WIN
-        unless (!$self->check_exists || (-f $path)) {
-            $self->log_fatal(["File %s does not exist", $path]);
-        }
-        unless ($path =~ /\.(jpe?g|png|gif)\z/) {
-            $self->log_fatal(["File %s not supported, only jpg/png/gif supported", $path]);
+        my ($paths) = @_;
+        $paths =~ s!\\!/!g; # windows
+        my @paths = split /\s*\|\s*/, $paths;
+
+        unless ($paths[0] =~ /\.(jpe?g|png|gif)\z/) {
+            $self->log_fatal(["File %s not supported, only jpg/png/gif supported", $paths[0]]);
         }
         my $url;
         if ($hosting eq 'metacpan') {
@@ -86,40 +84,53 @@ sub munge_files {
                 $authority,
                 $dist_name,
                 $dist_version,
-                $path,
+                $paths[0],
             );
         } elsif ($hosting eq 'github') {
             $url = sprintf(
                 "https://raw.githubusercontent.com/%s/%s/master/%s",
                 $github_user,
                 $github_repo,
-                $path,
+                $paths[0],
             );
         } elsif ($hosting eq 'gitlab') {
             $url = sprintf(
                 "https://gitlab.com/%s/%s/raw/master/%s",
                 $gitlab_user,
                 $gitlab_proj,
-                $path,
+                $paths[0],
             );
         } elsif ($hosting eq 'bitbucket') {
             $url = sprintf(
                 "https://bytebucket.org/%s/%s/raw/master/%s",
                 $bitbucket_user,
                 $bitbucket_repo,
-                $path,
+                $paths[0],
             );
         } elsif ($hosting eq 'data') {
             my $ct;
-            if ($path =~ /\.jpe?g\z/) {
+            if ($paths[0] =~ /\.jpe?g\z/) {
                 $ct = "image/jpeg";
             } else {
-                $path =~ /\.(\w+)\z/ or die;
+                $paths[0] =~ /\.(\w+)\z/ or die;
                 $ct = "image/$1";
             }
             $url = URI->new("data:");
             $url->media_type($ct);
-            $url->data(read_binary($path));
+            my $found;
+            for my $path (@paths) {
+                if (-f $path) {
+                    $url->data(read_binary($path));
+                    $found++;
+                    last;
+                } elsif (my ($file) = grep { $_->name eq $path } @{ $self->zilla->files }) {
+                    $url->data($file->encoded_content);
+                    $found++;
+                    last;
+                }
+            }
+            $self->log_fatal(["Can't find files %s in filesystem or build", \@paths])
+                unless $found;
             $url = "$url";
         }
 
@@ -221,6 +232,15 @@ The C<#IMAGE> directive must occur at the beginning of line and must be followed
 by path to the image (relative to the distribution's root). It is recommended to
 put the images in F<share/images>.
 
+You can put alternate locations by using C<|>, e.g.:
+
+ # IMAGE: location1.jpg|location2.jpg
+
+This can be useful if you are using hosting=data (where this plugin needs to
+read the content of the file) and C<location1.jpg> is produced by another plugin
+and might not be ready or added to the build at the time this plugin runs (but
+C<location2.jpg> is the temporary version of the file that already exists).
+
 Shared image files deployed inside a tarball (such as one created using
 L<Dist::Zilla::Plugin::ShareDir::Tarball>) are not yet supported.
 
@@ -270,10 +290,6 @@ C<data:> URIs where the image data is directly embedded in the URL.
 =head2 include_file_pattern => re
 
 =head2 exclude_file_pattern => re
-
-=head2 check_exists => bool (default: 0)
-
-Set to 1 to check that the file exists.
 
 
 =head1 SEE ALSO
