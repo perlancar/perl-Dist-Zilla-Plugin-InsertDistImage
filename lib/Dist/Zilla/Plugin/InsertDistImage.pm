@@ -80,7 +80,7 @@ sub munge_files {
         my $url;
         if ($hosting eq 'metacpan') {
             $url = sprintf(
-                "https://api.metacpan.org/source/%s/%s-%s/%s",
+                "https://st.aticpan.org/source/%s/%s-%s/%s",
                 $authority,
                 $dist_name,
                 $dist_version,
@@ -206,13 +206,13 @@ After build, F<lib/Foo.pm> will contain:
 
  =begin html
 
- <img src="https://api.metacpan.org/source/CPANID/Your-Dist-Name-0.123/share/images/img1.jpg" />
+ <img src="https://st.aticpan.org/source/CPANID/Your-Dist-Name-0.123/share/images/img1.jpg" />
 
  =end html
 
  =begin html
 
- <img src="https://api.metacpan.org/source/CPANID/Your-Dist-Name-0.123/share/images/img2.png" />
+ <img src="https://st.aticpan.org/source/CPANID/Your-Dist-Name-0.123/share/images/img2.png" />
 
  =end html
 
