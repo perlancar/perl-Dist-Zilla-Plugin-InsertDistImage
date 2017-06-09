@@ -184,7 +184,7 @@ In F<share/images>, put some images e.g. F<img1.jpg> and F<img2.png>.
 
 In F<dist.ini>:
 
- [InsertDistImages]
+ [InsertDistImage]
  ;hosting=metacpan
  ;include_files=...
  ;exclude_files=...
