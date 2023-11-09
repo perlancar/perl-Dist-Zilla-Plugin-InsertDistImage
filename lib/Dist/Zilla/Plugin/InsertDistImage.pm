@@ -72,7 +72,7 @@ sub munge_files {
                 unless $found;
             $url = "$url";
         } else {
-            $url = $self->zilla->get_shared_file_url($hosting, $paths[0]);
+            $url = $self->get_shared_file_url($hosting, $paths[0]);
         }
 
         "=begin html\n\n<img src=\"$url\" />\n\n=end html\n\n";
