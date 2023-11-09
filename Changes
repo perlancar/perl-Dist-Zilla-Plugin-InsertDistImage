@@ -1,3 +1,8 @@
+0.006   2023-11-09  Released-By: PERLANCAR; Urgency: medium
+
+        - [refactor] Use the extracted Dist::Zilla::Role::GetSharedFileURL.
+
+
 0.005   2017-06-09  Released-By: PERLANCAR
 
 	- Replace api.metacpan.org URL because MetaCPAN v0 API has been

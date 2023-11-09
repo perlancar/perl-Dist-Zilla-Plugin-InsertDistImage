@@ -1,11 +1,13 @@
 package Dist::Zilla::Plugin::InsertDistImage;
 
-# DATE
-# VERSION
-
 use 5.010001;
 use strict;
 use warnings;
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 use Moose;
 with (
