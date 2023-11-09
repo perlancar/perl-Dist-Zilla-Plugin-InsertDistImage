@@ -10,6 +10,7 @@ use warnings;
 use Moose;
 with (
     'Dist::Zilla::Role::FileMunger',
+    'Dist::Zilla::Role::GetSharedFileURL',
     'Dist::Zilla::Role::FileFinderUser' => {
         default_finders => [':InstallModules', ':ExecFiles'],
     },
@@ -34,41 +35,6 @@ sub munge_files {
     # check hosting configuration
     my $hosting = $self->hosting;
 
-    my ($authority, $dist_name, $dist_version);
-    my ($github_user, $github_repo);
-    my ($gitlab_user, $gitlab_proj);
-    my ($bitbucket_user, $bitbucket_repo);
-
-    if ($hosting eq 'metacpan') {
-        $authority = $self->zilla->distmeta->{x_authority};
-        $self->$self->log_fatal(["Distribution doesn't have x_authority metadata"]) unless $authority;
-        $self->$self->log_fatal(["x_authority is not cpan:"]) unless $authority =~ s/^cpan://;
-        $dist_name = $self->zilla->name;
-        $dist_version = $self->zilla->version;
-    } elsif ($hosting eq 'github' || $hosting eq 'gitlab' || $hosting eq 'bitbucket') {
-        my $resources = $self->zilla->distmeta->{resources};
-        $self->log_fatal(["Distribution doesn't have resources metadata"]) unless $resources;
-        $self->log_fatal(["Distribution resources metadata doesn't have repository"]) unless $resources->{repository};
-        $self->log_fatal(["Repository in distribution resources metadata is not a hash"]) unless ref($resources->{repository}) eq 'HASH';
-        my $type = $resources->{repository}{type};
-        $self->log_fatal(["Repository in distribution resources metadata doesn't have type"]) unless $type;
-        my $url = $resources->{repository}{url};
-        $self->log_fatal(["Repository in distribution resources metadata doesn't have url"]) unless $url;
-        if ($hosting eq 'github') {
-            $self->log_fatal(["Repository type is not git"]) unless $type eq 'git';
-            $self->log_fatal(["Repository URL is not github"]) unless ($github_user, $github_repo) = $url =~ m!github\.com/([^/]+)/([^/]+)\.git!;
-        } elsif ($hosting eq 'gitlab') {
-            $self->log_fatal(["Repository type is not git"]) unless $type eq 'git';
-            $self->log_fatal(["Repository URL is not gitlab"]) unless ($gitlab_user, $gitlab_proj) = $url =~ m!gitlab\.com/([^/]+)/([^/]+)\.git!;
-        } elsif ($hosting eq 'bitbucket') {
-            $self->log_fatal(["Repository type is not git (mercurial not yet supported)"]) unless $type eq 'git';
-            $self->log_fatal(["Repository URL is not bitbucket"]) unless ($bitbucket_user, $bitbucket_repo) = $url =~ m!bitbucket\.org/([^/]+)/([^/]+)\.git!;
-        }
-    } elsif ($hosting eq 'data') {
-    } else {
-        $self->log_fatal(["Unknown hosting value '%s'", $hosting]);
-    }
-
     my $code_insert = sub {
         my ($paths) = @_;
         $paths =~ s!\\!/!g; # windows
@@ -78,36 +44,7 @@ sub munge_files {
             $self->log_fatal(["File %s not supported, only jpg/png/gif supported", $paths[0]]);
         }
         my $url;
-        if ($hosting eq 'metacpan') {
-            $url = sprintf(
-                "https://st.aticpan.org/source/%s/%s-%s/%s",
-                $authority,
-                $dist_name,
-                $dist_version,
-                $paths[0],
-            );
-        } elsif ($hosting eq 'github') {
-            $url = sprintf(
-                "https://raw.githubusercontent.com/%s/%s/master/%s",
-                $github_user,
-                $github_repo,
-                $paths[0],
-            );
-        } elsif ($hosting eq 'gitlab') {
-            $url = sprintf(
-                "https://gitlab.com/%s/%s/raw/master/%s",
-                $gitlab_user,
-                $gitlab_proj,
-                $paths[0],
-            );
-        } elsif ($hosting eq 'bitbucket') {
-            $url = sprintf(
-                "https://bytebucket.org/%s/%s/raw/master/%s",
-                $bitbucket_user,
-                $bitbucket_repo,
-                $paths[0],
-            );
-        } elsif ($hosting eq 'data') {
+        if ($hosting eq 'data') {
             my $ct;
             if ($paths[0] =~ /\.jpe?g\z/) {
                 $ct = "image/jpeg";
@@ -132,6 +69,8 @@ sub munge_files {
             $self->log_fatal(["Can't find files %s in filesystem or build", \@paths])
                 unless $found;
             $url = "$url";
+        } else {
+            $url = $self->zilla->get_shared_file_url($hosting, $paths[0]);
         }
 
         "=begin html\n\n<img src=\"$url\" />\n\n=end html\n\n";
